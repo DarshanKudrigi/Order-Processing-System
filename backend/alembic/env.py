@@ -17,13 +17,14 @@ target_metadata = Base.metadata
 sync_url = settings.SYNC_DATABASE_URL
 if not sync_url:
     sync_url = settings.DATABASE_URL.replace("+asyncpg", "").replace("+aiosqlite", "")
-config.set_main_option("sqlalchemy.url", sync_url)
+
+# Escape % for configparser interpolation (e.g. %40 in passwords)
+config.set_main_option("sqlalchemy.url", sync_url.replace("%", "%%"))
 
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
+        url=sync_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -34,14 +35,14 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    from sqlalchemy import create_engine
+    connectable = create_engine(sync_url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
+
+        with context.begin_transaction():
+            context.run_migrations()
 
         with context.begin_transaction():
             context.run_migrations()

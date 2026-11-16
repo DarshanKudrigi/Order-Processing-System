@@ -21,8 +21,12 @@ from src.config.env import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure tables exist
-    await init_db()
+    # Ensure tables exist if database is running
+    try:
+        await init_db()
+    except Exception as exc:
+        print(f"WARNING: Could not connect to PostgreSQL on startup ({exc}).")
+        print("FastAPI will start, and will connect as soon as the PostgreSQL service is active.")
 
     # Start status listener inside API (PRD Section 7.2 & 8.3)
     stop_event = asyncio.Event()

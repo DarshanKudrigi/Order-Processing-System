@@ -1,33 +1,35 @@
-# Python
+# Virtual Environments
+backend/.venv/
+.venv/
+env/
+venv/
+
+# Environment Variables & Secrets
+backend/.env
+.env
+.env.local
+.env.*.local
+
+# Node & Frontend Build
+frontend/node_modules/
+frontend/dist/
+node_modules/
+dist/
+
+# Python Cache
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-
-# Virtual Environment
-.venv/
-venv/
-ENV/
-env/
+backend/**/__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Databases
 *.db
-*.sqlite
 *.sqlite3
 
-# Environment variables
-.env
-
-# Testing & Quality Tools
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-.coverage
-htmlcov/
-
-# IDE & OS
-.vscode/
-.idea/
+# Logs & OS files
+*.log
 .DS_Store
 Thumbs.db
