@@ -1,12 +1,12 @@
-# Loosely Coupled Order Processing System (Python Backend)
+# Backend: Loosely Coupled Order Processing System
 
-A production-grade, loosely coupled, event-driven order processing system built with **Python 3.12+**, **FastAPI**, **SQLAlchemy/Alembic (PostgreSQL)**, **Pydantic**, and **Azure Service Bus**, conforming to the Product Requirements Document (PRD).
+A production-grade, loosely coupled, event-driven order processing backend built with **Python 3.12+**, **FastAPI**, **SQLAlchemy/Alembic (PostgreSQL)**, **Pydantic**, and **Azure Service Bus**.
 
 ---
 
 ## 1. Architecture Overview
 
-The system is designed around asynchronous, publish-subscribe messaging over Azure Service Bus. Services never call each other directly; they only communicate by publishing and consuming events from the `order-events` topic.
+Services communicate exclusively by publishing and consuming events from the `order-events` Azure Service Bus topic.
 
 ```
 [Browser / Client]
@@ -53,96 +53,55 @@ The system is designed around asynchronous, publish-subscribe messaging over Azu
 
 ---
 
-## 3. Reliability & Delivery Rules
-
-- **R1 (At-least-once delivery)**: All subscriptions operate in `peekLock` mode; messages are completed only after successful processing.
-- **R2 (Idempotent consumers)**: Consumers check `processed_messages (message_id, consumer)` before executing work and record it immediately upon completion. Payments and shipments have unique constraints per order.
-- **R3 (Retry & Backoff)**: Unhandled errors abandon the message, triggering Service Bus redelivery up to max 5 delivery attempts.
-- **R4 (Dead-Letter Queue)**: Messages exceeding 5 delivery attempts or containing poison/malformed JSON payloads are sent directly to the dead-letter queue (DLQ).
-- **R5 (Compensation)**: Inventory Worker reverses reservations on `PaymentFailed` and `OrderCancelled` exactly once.
-- **R6 (Forward-only status transitions)**: Status Listener accepts transitions moving strictly forward (`PENDING` -> `STOCK_RESERVED` -> `PAID` -> `SHIPPED`). Terminal states (`SHIPPED`, `FAILED`, `CANCELLED`) are immutable.
-- **R7 (Own your data)**: Services write only to their designated tables.
-- **R8 (Traceability)**: Every log line outputs structured JSON containing `correlationId` (the `orderId`) and `messageId`.
-- **R9 (Publish failure handling)**: If publishing `OrderCreated` fails, the order status is set to `FAILED` (`MESSAGING_UNAVAILABLE`) and returns HTTP 503.
-
----
-
-## 4. REST API Specification
-
-Base URL: `/api`  
-Auth: Bearer JWT (`Authorization: Bearer <token>`)
-
-| ID | Method & Path | Auth | Purpose | Success |
-|---|---|---|---|---|
-| EP-01 | `POST /api/auth/register` | Public | Register customer account | 201 |
-| EP-02 | `POST /api/auth/login` | Public | Login, returns JWT token & user | 200 |
-| EP-03 | `GET /api/auth/me` | User | Get current user profile | 200 |
-| EP-04 | `GET /api/products` | Public | List products (search, category, page, limit) | 200 |
-| EP-05 | `GET /api/products/:id` | Public | Product detail with stock availability | 200 |
-| EP-06 | `POST /api/products` | Admin | Create product + inventory stock | 201 |
-| EP-07 | `PUT /api/products/:id` | Admin | Update product information | 200 |
-| EP-08 | `DELETE /api/products/:id` | Admin | Soft delete product (`is_active = false`) | 204 |
-| EP-09 | `GET /api/inventory` | Admin | List inventory stock for all products | 200 |
-| EP-10 | `PATCH /api/inventory/:productId` | Admin | Update product available quantity | 200 |
-| EP-11 | `POST /api/orders` | Customer | Place order, calculates total, publishes `OrderCreated` | 202 |
-| EP-12 | `GET /api/orders` | User | List my orders (Admin: all orders, `?status=`) | 200 |
-| EP-13 | `GET /api/orders/:id` | User | Order detail with items, payment, and shipment | 200 |
-| EP-14 | `GET /api/orders/:id/events` | User | Complete order events timeline | 200 |
-| EP-15 | `POST /api/orders/:id/cancel` | Customer | Cancel order in PENDING/STOCK_RESERVED | 200 |
-| EP-16 | `GET /api/admin/stats` | Admin | Dashboard metrics (today's orders, revenue, low stock) | 200 |
-| EP-17 | `GET /api/admin/dead-letters` | Admin | Peek DLQ messages across all 5 subscriptions | 200 |
-| EP-18 | `GET /api/health` | Public | Health status of API, database, and Service Bus | 200 / 503 |
-
-Contract definition file: [`openapi.yaml`](./openapi.yaml).
-
----
-
-## 5. Local Setup & Quickstart
+## 3. Local Setup & Quickstart
 
 ### Prerequisites
-- Python 3.12+ (or `uv`)
-- Docker & Docker Compose (optional, for running with PostgreSQL)
+- Python 3.12+ (managed with `uv`)
+- PostgreSQL 15+ running on port 5432 (or via Docker)
 
 ### 1. Installation
-```bash
-# Clone the repository and enter directory
-cd Order-Processing-System
-
-# Using uv (recommended)
+```powershell
+# In backend directory
 uv venv .venv
-# On Windows
+
+# Activate virtual environment
+# On Windows:
 .venv\Scripts\activate
-# On Linux/macOS
+# On Linux / macOS:
 source .venv/bin/activate
 
+# Install dependencies in editable mode
 uv pip install -e ".[dev]"
 ```
 
 ### 2. Configuration
-Copy `.env.example` to `.env`:
+Copy `.env.example` to `.env` and fill in your credentials:
 ```bash
 cp .env.example .env
 ```
-For local testing without Azure Service Bus credentials, keep `USE_IN_MEMORY_BUS=true`.
 
-### 3. Database Migration and Seeding
-```bash
-# Run database migrations
+### 3. Database Creation & Migrations
+```powershell
+# Create database if it does not exist
+python scripts/create_db.py
+
+# Run Alembic migrations
 alembic upgrade head
 
-# Seed initial admin, customer, and 20 sample products
+# Seed initial admin, customer, and 21 sample products
 python scripts/seed.py
 ```
 
 ### 4. Running the Order API Server
-```bash
+```powershell
 python -m src.api.server
 ```
 The API is available at `http://localhost:8080`.  
 Interactive Swagger docs: `http://localhost:8080/docs`.
 
-### 5. Running Worker Services Individually
-```bash
+### 5. Running Background Workers Individually
+When `USE_IN_MEMORY_BUS=false`:
+```powershell
 python -m src.workers.inventory_worker
 python -m src.workers.payment_worker
 python -m src.workers.shipping_worker
@@ -151,18 +110,18 @@ python -m src.workers.notification_worker
 
 ---
 
-## 6. Running with Docker Compose
+## 4. Running with Docker Compose
 
 To run PostgreSQL, Order API, and all 4 background workers simultaneously:
-```bash
+```powershell
 docker-compose up --build
 ```
 
 ---
 
-## 7. Running Tests and Quality Checks
+## 5. Running Tests and Quality Checks
 
-```bash
+```powershell
 # Format and linting
 ruff check .
 mypy src tests scripts
@@ -170,4 +129,3 @@ mypy src tests scripts
 # Run full test suite (unit + acceptance integration tests AT-01 to AT-10)
 pytest -v
 ```
-
