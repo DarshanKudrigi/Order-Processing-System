@@ -66,10 +66,24 @@ function MainLayout() {
         search: searchTerm,
         limit: 50,
       });
-      if (res && res.items && res.items.length > 0) {
-        setProducts(res.items);
-      } else if (res && Array.isArray(res) && res.length > 0) {
-        setProducts(res);
+
+      const rawList = res?.data || res?.items || (Array.isArray(res) ? res : []);
+
+      if (rawList && rawList.length > 0) {
+        const normalized = rawList.map((p) => ({
+          ...p,
+          image_url:
+            p.imageUrl ||
+            p.image_url ||
+            'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80',
+          imageUrl:
+            p.imageUrl ||
+            p.image_url ||
+            'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80',
+          quantity_available: p.availableQuantity ?? p.quantity_available ?? 0,
+          availableQuantity: p.availableQuantity ?? p.quantity_available ?? 0,
+        }));
+        setProducts(normalized);
       }
     } catch (err) {
       // Graceful fallback to rich mock data if DB/API is offline

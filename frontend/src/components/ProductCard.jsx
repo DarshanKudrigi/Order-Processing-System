@@ -9,8 +9,9 @@ export default function ProductCard({ product, onSelect }) {
 
   const cartItem = items.find((i) => i.id === product.id);
   const inCartQty = cartItem ? cartItem.quantity : 0;
-  const isOutOfStock = (product.quantity_available ?? 0) <= 0;
-  const isLowStock = !isOutOfStock && (product.quantity_available ?? 0) <= 10;
+  const stock = product.quantity_available ?? product.availableQuantity ?? 0;
+  const isOutOfStock = stock <= 0;
+  const isLowStock = !isOutOfStock && stock <= 10;
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
@@ -26,6 +27,11 @@ export default function ProductCard({ product, onSelect }) {
     maximumFractionDigits: 0,
   }).format(product.price);
 
+  const imgSrc =
+    imgError || (!product.image_url && !product.imageUrl)
+      ? 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80'
+      : product.image_url || product.imageUrl;
+
   return (
     <div
       onClick={() => onSelect(product)}
@@ -34,11 +40,7 @@ export default function ProductCard({ product, onSelect }) {
       {/* Product Image Container */}
       <div className="relative aspect-4/3 w-full bg-slate-100 overflow-hidden">
         <img
-          src={
-            imgError || !product.image_url
-              ? 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80'
-              : product.image_url
-          }
+          src={imgSrc}
           alt={product.name}
           onError={() => setImgError(true)}
           className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
@@ -61,11 +63,11 @@ export default function ProductCard({ product, onSelect }) {
           ) : isLowStock ? (
             <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500 text-white shadow-xs flex items-center gap-1">
               <AlertCircle size={11} />
-              <span>Only {product.quantity_available} left</span>
+              <span>Only {stock} left</span>
             </span>
           ) : (
             <span className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-900/80 backdrop-blur-md text-emerald-300">
-              {product.quantity_available} in stock
+              {stock} in stock
             </span>
           )}
         </div>

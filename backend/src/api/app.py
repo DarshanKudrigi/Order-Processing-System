@@ -17,6 +17,10 @@ from src.api.status_listener import run_listener
 from src.common.middleware import CorrelationIdMiddleware, register_error_handlers
 from src.config.db import init_db
 from src.config.env import settings
+from src.workers.inventory_worker import run_worker as run_inventory_worker
+from src.workers.notification_worker import run_worker as run_notification_worker
+from src.workers.payment_worker import run_worker as run_payment_worker
+from src.workers.shipping_worker import run_worker as run_shipping_worker
 
 
 @asynccontextmanager
@@ -28,16 +32,24 @@ async def lifespan(app: FastAPI):
         print(f"WARNING: Could not connect to PostgreSQL on startup ({exc}).")
         print("FastAPI will start, and will connect as soon as the PostgreSQL service is active.")
 
-    # Start status listener inside API (PRD Section 7.2 & 8.3)
     stop_event = asyncio.Event()
-    task = asyncio.create_task(run_listener(stop_event=stop_event))
+    tasks = [asyncio.create_task(run_listener(stop_event=stop_event))]
+
+    # When using in-memory bus in non-test runtime, run all 4 background workers in-process
+    if settings.USE_IN_MEMORY_BUS and settings.ENVIRONMENT != "test":
+        tasks.extend([
+            asyncio.create_task(run_inventory_worker(stop_event=stop_event)),
+            asyncio.create_task(run_payment_worker(stop_event=stop_event)),
+            asyncio.create_task(run_shipping_worker(stop_event=stop_event)),
+            asyncio.create_task(run_notification_worker(stop_event=stop_event)),
+        ])
+
     yield
+
     stop_event.set()
-    task.cancel()
-    try:
-        await task
-    except (asyncio.CancelledError, Exception):
-        pass
+    for t in tasks:
+        t.cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
 
 
 app = FastAPI(

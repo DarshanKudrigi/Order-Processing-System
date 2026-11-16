@@ -14,32 +14,62 @@ import {
 } from 'lucide-react';
 
 export default function MyOrders({ onSelectOrder, onGoToStore }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, quickDemoLogin } = useAuth();
   const { addToast } = useToast();
   const [orders, setOrders] = useState([]);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (showLoading = true) => {
     if (!isAuthenticated) {
       setLoading(false);
+      setOrders([]);
+      setTotalOrders(0);
       return;
     }
-    setLoading(true);
+
+    if (showLoading && orders.length === 0) {
+      setLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
+
     try {
-      const res = await api.orders.list();
-      setOrders(Array.isArray(res) ? res : res.orders || []);
+      // Fetch with limit 100 to show complete user history
+      const res = await api.orders.list({ limit: 100 });
+      const list = res?.data || res?.orders || (Array.isArray(res) ? res : []);
+      setOrders(list);
+      setTotalOrders(res?.total !== undefined ? res.total : list.length);
     } catch (err) {
-      addToast(err.message || 'Failed to load orders', 'error');
+      if (showLoading) {
+        addToast(err.message || 'Failed to load orders', 'error');
+      }
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, [isAuthenticated]);
+    fetchOrders(true);
+
+    // Auto-poll orders every 4 seconds so background saga status updates and new orders reflect automatically
+    const interval = setInterval(() => {
+      fetchOrders(false);
+    }, 4000);
+
+    // Re-fetch immediately when user returns to tab
+    const handleFocus = () => fetchOrders(false);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [isAuthenticated, user?.id]);
 
   const filteredOrders = orders.filter((o) => {
     const matchesSearch =
@@ -80,19 +110,25 @@ export default function MyOrders({ onSelectOrder, onGoToStore }) {
         </div>
 
         <button
-          onClick={fetchOrders}
-          className="self-start sm:self-auto px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition cursor-pointer"
+          onClick={() => fetchOrders(true)}
+          disabled={isRefreshing}
+          className="self-start sm:self-auto px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition cursor-pointer disabled:opacity-60"
         >
-          <RefreshCw size={14} />
-          <span>Refresh</span>
+          <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-indigo-600' : ''} />
+          <span>{isRefreshing ? 'Updating...' : 'Refresh'}</span>
         </button>
       </div>
 
       {/* Stats Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
-          <span className="text-xs font-semibold text-slate-400 block mb-1">Total Orders</span>
-          <span className="text-2xl font-extrabold text-slate-900">{orders.length}</span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400 block mb-1">Total Orders</span>
+            {isRefreshing && (
+              <span className="inline-block w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>
+            )}
+          </div>
+          <span className="text-2xl font-extrabold text-slate-900">{totalOrders}</span>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
           <span className="text-xs font-semibold text-slate-400 block mb-1">Active / In Progress</span>
@@ -109,23 +145,40 @@ export default function MyOrders({ onSelectOrder, onGoToStore }) {
       {/* Filter and Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
         {/* Status Tabs */}
-        <div className="flex items-center gap-1 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+        <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
           {[
-            { id: 'ALL', label: 'All Orders' },
-            { id: 'ACTIVE', label: 'In Progress' },
-            { id: 'SHIPPED', label: 'Dispatched' },
-            { id: 'FAILED', label: 'Failed / Cancelled' },
+            { id: 'ALL', label: 'All Orders', count: totalOrders || orders.length },
+            { id: 'ACTIVE', label: 'In Progress', count: activeCount },
+            {
+              id: 'SHIPPED',
+              label: 'Dispatched',
+              count: orders.filter((o) => o.status === 'SHIPPED').length,
+            },
+            {
+              id: 'FAILED',
+              label: 'Failed / Cancelled',
+              count: orders.filter((o) => ['FAILED', 'CANCELLED'].includes(o.status)).length,
+            },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setFilterStatus(tab.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
                 filterStatus === tab.id
-                  ? 'bg-slate-900 text-white'
+                  ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              {tab.label}
+              <span>{tab.label}</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  filterStatus === tab.id
+                    ? 'bg-white/25 text-white'
+                    : 'bg-slate-200 text-slate-600'
+                }`}
+              >
+                {tab.count}
+              </span>
             </button>
           ))}
         </div>
@@ -144,7 +197,25 @@ export default function MyOrders({ onSelectOrder, onGoToStore }) {
       </div>
 
       {/* Orders List */}
-      {loading ? (
+      {!isAuthenticated ? (
+        <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-4 shadow-xs">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+            <Package size={32} />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-800">Sign in to view your orders</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+              Your orders are tracked securely per customer account.
+            </p>
+          </div>
+          <button
+            onClick={() => quickDemoLogin('CUSTOMER')}
+            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition inline-flex items-center gap-2 cursor-pointer"
+          >
+            <span>Quick Sign In as Customer (Asha K)</span>
+          </button>
+        </div>
+      ) : loading ? (
         <div className="text-center py-16 space-y-3">
           <div className="inline-block w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
           <p className="text-xs font-semibold text-slate-500">Retrieving your orders...</p>
@@ -217,7 +288,10 @@ export default function MyOrders({ onSelectOrder, onGoToStore }) {
                     <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500">
                       <span>{ord.createdAt ? new Date(ord.createdAt).toLocaleDateString() : 'Recent'}</span>
                       <span>•</span>
-                      <span>{ord.items?.length || 1} {(ord.items?.length || 1) === 1 ? 'item' : 'items'}</span>
+                      <span>
+                        {ord.itemCount ?? ord.items?.length ?? 1}{' '}
+                        {(ord.itemCount ?? ord.items?.length ?? 1) === 1 ? 'item' : 'items'}
+                      </span>
                       <span>•</span>
                       <span className="font-mono">{ord.paymentMethod || 'UPI'}</span>
                     </div>

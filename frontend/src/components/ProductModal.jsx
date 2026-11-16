@@ -11,8 +11,12 @@ export default function ProductModal({ product, onClose }) {
 
   if (!product) return null;
 
-  const maxStock = product.quantity_available ?? 0;
+  const maxStock = product.quantity_available ?? product.availableQuantity ?? 0;
   const isOutOfStock = maxStock <= 0;
+  const imgSrc =
+    product.image_url ||
+    product.imageUrl ||
+    'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80';
 
   const handleAdd = () => {
     if (isOutOfStock) return;
@@ -45,7 +49,7 @@ export default function ProductModal({ product, onClose }) {
         {/* Product Media */}
         <div className="w-full md:w-1/2 bg-slate-100 relative min-h-[260px] md:min-h-full">
           <img
-            src={product.image_url}
+            src={imgSrc}
             alt={product.name}
             className="w-full h-full object-cover"
           />
