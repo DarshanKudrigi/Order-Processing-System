@@ -298,12 +298,14 @@ function MainLayout() {
         {activeView === 'tracker' && (
           <OrderTracker
             orderId={selectedOrderId}
-            onBack={() => setActiveView('orders')}
+            onBack={() => setActiveView(isAdmin ? 'admin' : 'orders')}
           />
         )}
 
         {/* VIEW: ADMIN OPERATIONS CONTROL PLANE */}
-        {activeView === 'admin' && <AdminDashboard />}
+        {activeView === 'admin' && (
+          <AdminDashboard onSelectOrder={handleSelectOrderFromList} />
+        )}
       </main>
 
       {/* Footer */}
