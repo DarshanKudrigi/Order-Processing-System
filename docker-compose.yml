@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: orderapp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: orders
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d orders"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  order-api:
+    build: .
+    container_name: ca-order-api
+    restart: unless-stopped
+    command: python -m src.api.server
+    ports:
+      - "8080:8080"
+    environment:
+      ENVIRONMENT: development
+      PORT: 8080
+      DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@postgres:5432/orders
+      SYNC_DATABASE_URL: postgresql://postgres:postgrespassword@postgres:5432/orders
+      JWT_SECRET: super-secret-key-that-is-at-least-32-chars-long
+      JWT_EXPIRES_IN: 8h
+      CORS_ORIGIN: http://localhost:5173
+      SERVICEBUS_CONNECTION_STRING: ${SERVICEBUS_CONNECTION_STRING:-}
+      SB_TOPIC_NAME: order-events
+      SB_MAX_CONCURRENT_CALLS: 5
+      USE_IN_MEMORY_BUS: ${USE_IN_MEMORY_BUS:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  inventory-worker:
+    build: .
+    container_name: ca-inventory
+    restart: unless-stopped
+    command: python -m src.workers.inventory_worker
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@postgres:5432/orders
+      SERVICEBUS_CONNECTION_STRING: ${SERVICEBUS_CONNECTION_STRING:-}
+      SB_TOPIC_NAME: order-events
+      SB_MAX_CONCURRENT_CALLS: 5
+      USE_IN_MEMORY_BUS: ${USE_IN_MEMORY_BUS:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  payment-worker:
+    build: .
+    container_name: ca-payment
+    restart: unless-stopped
+    command: python -m src.workers.payment_worker
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@postgres:5432/orders
+      SERVICEBUS_CONNECTION_STRING: ${SERVICEBUS_CONNECTION_STRING:-}
+      SB_TOPIC_NAME: order-events
+      SB_MAX_CONCURRENT_CALLS: 5
+      USE_IN_MEMORY_BUS: ${USE_IN_MEMORY_BUS:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  shipping-worker:
+    build: .
+    container_name: ca-shipping
+    restart: unless-stopped
+    command: python -m src.workers.shipping_worker
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@postgres:5432/orders
+      SERVICEBUS_CONNECTION_STRING: ${SERVICEBUS_CONNECTION_STRING:-}
+      SB_TOPIC_NAME: order-events
+      SB_MAX_CONCURRENT_CALLS: 5
+      USE_IN_MEMORY_BUS: ${USE_IN_MEMORY_BUS:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  notification-worker:
+    build: .
+    container_name: ca-notification
+    restart: unless-stopped
+    command: python -m src.workers.notification_worker
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@postgres:5432/orders
+      SERVICEBUS_CONNECTION_STRING: ${SERVICEBUS_CONNECTION_STRING:-}
+      SB_TOPIC_NAME: order-events
+      SB_MAX_CONCURRENT_CALLS: 5
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-orders@example.com}
+      USE_IN_MEMORY_BUS: ${USE_IN_MEMORY_BUS:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+

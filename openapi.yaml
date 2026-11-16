@@ -1,0 +1,1347 @@
+openapi: 3.1.0
+info:
+  title: Loosely Coupled Order Processing System API
+  version: 1.0.0
+paths:
+  /api/auth/register:
+    post:
+      tags:
+      - Auth
+      summary: Register User
+      operationId: register_user_api_auth_register_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Login User
+      operationId: login_user_api_auth_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/auth/me:
+    get:
+      tags:
+      - Auth
+      summary: Get Me
+      operationId: get_me_api_auth_me_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/products:
+    get:
+      tags:
+      - Products
+      summary: List Products
+      operationId: list_products_api_products_get
+      parameters:
+      - name: search
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Search
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Category
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 10
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - Products
+      summary: Create Product
+      operationId: create_product_api_products_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetailResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/products/{product_id}:
+    get:
+      tags:
+      - Products
+      summary: Get Product
+      operationId: get_product_api_products__product_id__get
+      parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Product Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetailResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Products
+      summary: Update Product
+      operationId: update_product_api_products__product_id__put
+      parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Product Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetailResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Products
+      summary: Delete Product
+      operationId: delete_product_api_products__product_id__delete
+      parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Product Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/inventory:
+    get:
+      tags:
+      - Inventory
+      summary: List Inventory
+      operationId: list_inventory_api_inventory_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InventoryItemResponse'
+                title: Response List Inventory Api Inventory Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/inventory/{product_id}:
+    patch:
+      tags:
+      - Inventory
+      summary: Update Inventory
+      operationId: update_inventory_api_inventory__product_id__patch
+      parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Product Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateInventoryRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryItemResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/orders:
+    post:
+      tags:
+      - Orders
+      summary: Create Order
+      operationId: create_order_api_orders_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - Orders
+      summary: List Orders
+      operationId: list_orders_api_orders_get
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 10
+          title: Limit
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/orders/{order_id}:
+    get:
+      tags:
+      - Orders
+      summary: Get Order Detail
+      operationId: get_order_detail_api_orders__order_id__get
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Order Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetailResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/orders/{order_id}/events:
+    get:
+      tags:
+      - Orders
+      summary: Get Order Events
+      operationId: get_order_events_api_orders__order_id__events_get
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Order Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderEventItem'
+                title: Response Get Order Events Api Orders  Order Id  Events Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/orders/{order_id}/cancel:
+    post:
+      tags:
+      - Orders
+      summary: Cancel Order
+      operationId: cancel_order_api_orders__order_id__cancel_post
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Order Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelOrderResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/admin/stats:
+    get:
+      tags:
+      - Admin
+      summary: Get Admin Stats
+      operationId: get_admin_stats_api_admin_stats_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminStatsResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/admin/dead-letters:
+    get:
+      tags:
+      - Admin
+      summary: Get Dead Letters
+      operationId: get_dead_letters_api_admin_dead_letters_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeadLetterItem'
+                title: Response Get Dead Letters Api Admin Dead Letters Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/health:
+    get:
+      tags:
+      - Health
+      summary: Get Health
+      operationId: get_health_api_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+components:
+  schemas:
+    AdminStatsResponse:
+      properties:
+        ordersToday:
+          type: integer
+          title: Orderstoday
+        byStatus:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Bystatus
+        revenueShipped:
+          type: number
+          title: Revenueshipped
+        lowStock:
+          items:
+            $ref: '#/components/schemas/LowStockItem'
+          type: array
+          title: Lowstock
+        stuckPending:
+          type: integer
+          title: Stuckpending
+      type: object
+      required:
+      - ordersToday
+      - byStatus
+      - revenueShipped
+      - lowStock
+      - stuckPending
+      title: AdminStatsResponse
+    CancelOrderResponse:
+      properties:
+        orderId:
+          type: string
+          title: Orderid
+        orderNumber:
+          type: string
+          title: Ordernumber
+        status:
+          type: string
+          title: Status
+      type: object
+      required:
+      - orderId
+      - orderNumber
+      - status
+      title: CancelOrderResponse
+    CreateOrderRequest:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/OrderItemInput'
+          type: array
+          maxItems: 20
+          minItems: 1
+          title: Items
+        paymentMethod:
+          type: string
+          enum:
+          - COD
+          - UPI
+          - CARD
+          - TEST_FAIL
+          title: Paymentmethod
+        shippingAddress:
+          $ref: '#/components/schemas/ShippingAddressInput'
+      type: object
+      required:
+      - items
+      - paymentMethod
+      - shippingAddress
+      title: CreateOrderRequest
+    CreateOrderResponse:
+      properties:
+        orderId:
+          type: string
+          title: Orderid
+        orderNumber:
+          type: string
+          title: Ordernumber
+        status:
+          type: string
+          title: Status
+        totalAmount:
+          type: number
+          title: Totalamount
+        currency:
+          type: string
+          title: Currency
+      type: object
+      required:
+      - orderId
+      - orderNumber
+      - status
+      - totalAmount
+      - currency
+      title: CreateOrderResponse
+    CreateProductRequest:
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 2
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        price:
+          anyOf:
+          - type: number
+            exclusiveMinimum: 0.0
+          - type: string
+          title: Price
+        category:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Category
+        imageUrl:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Imageurl
+        availableQuantity:
+          type: integer
+          minimum: 0.0
+          title: Availablequantity
+          default: 0
+      type: object
+      required:
+      - name
+      - price
+      - category
+      title: CreateProductRequest
+    DeadLetterItem:
+      properties:
+        subscription:
+          type: string
+          title: Subscription
+        messageId:
+          type: string
+          title: Messageid
+        eventType:
+          type: string
+          title: Eventtype
+        orderId:
+          type: string
+          title: Orderid
+        reason:
+          type: string
+          title: Reason
+        deliveryCount:
+          type: integer
+          title: Deliverycount
+        enqueuedAt:
+          type: string
+          title: Enqueuedat
+      type: object
+      required:
+      - subscription
+      - messageId
+      - eventType
+      - orderId
+      - reason
+      - deliveryCount
+      - enqueuedAt
+      title: DeadLetterItem
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    HealthResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+        api:
+          type: string
+          title: Api
+        database:
+          type: string
+          title: Database
+        serviceBus:
+          type: string
+          title: Servicebus
+      type: object
+      required:
+      - status
+      - api
+      - database
+      - serviceBus
+      title: HealthResponse
+    InventoryItemResponse:
+      properties:
+        productId:
+          type: string
+          title: Productid
+        productName:
+          type: string
+          title: Productname
+        quantityAvailable:
+          type: integer
+          title: Quantityavailable
+        quantityReserved:
+          type: integer
+          title: Quantityreserved
+        updatedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Updatedat
+      type: object
+      required:
+      - productId
+      - productName
+      - quantityAvailable
+      - quantityReserved
+      title: InventoryItemResponse
+    LoginRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - email
+      - password
+      title: LoginRequest
+    LoginResponse:
+      properties:
+        token:
+          type: string
+          title: Token
+        user:
+          $ref: '#/components/schemas/UserProfileResponse'
+      type: object
+      required:
+      - token
+      - user
+      title: LoginResponse
+    LowStockItem:
+      properties:
+        productId:
+          type: string
+          title: Productid
+        name:
+          type: string
+          title: Name
+        available:
+          type: integer
+          title: Available
+      type: object
+      required:
+      - productId
+      - name
+      - available
+      title: LowStockItem
+    OrderDetailResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        orderNumber:
+          type: string
+          title: Ordernumber
+        status:
+          type: string
+          title: Status
+        failureReason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Failurereason
+        totalAmount:
+          type: number
+          title: Totalamount
+        currency:
+          type: string
+          title: Currency
+        paymentMethod:
+          type: string
+          title: Paymentmethod
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+        items:
+          items:
+            $ref: '#/components/schemas/OrderItemDetail'
+          type: array
+          title: Items
+        shippingAddress:
+          additionalProperties: true
+          type: object
+          title: Shippingaddress
+        payment:
+          anyOf:
+          - $ref: '#/components/schemas/PaymentDetail'
+          - type: 'null'
+        shipment:
+          anyOf:
+          - $ref: '#/components/schemas/ShipmentDetail'
+          - type: 'null'
+      type: object
+      required:
+      - id
+      - orderNumber
+      - status
+      - totalAmount
+      - currency
+      - paymentMethod
+      - createdAt
+      - items
+      - shippingAddress
+      title: OrderDetailResponse
+    OrderEventItem:
+      properties:
+        eventType:
+          type: string
+          title: Eventtype
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+        source:
+          type: string
+          title: Source
+        payload:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Payload
+      type: object
+      required:
+      - eventType
+      - createdAt
+      - source
+      title: OrderEventItem
+    OrderItemDetail:
+      properties:
+        productId:
+          type: string
+          title: Productid
+        productName:
+          type: string
+          title: Productname
+        unitPrice:
+          type: number
+          title: Unitprice
+        quantity:
+          type: integer
+          title: Quantity
+      type: object
+      required:
+      - productId
+      - productName
+      - unitPrice
+      - quantity
+      title: OrderItemDetail
+    OrderItemInput:
+      properties:
+        productId:
+          type: string
+          title: Productid
+        quantity:
+          type: integer
+          maximum: 10.0
+          minimum: 1.0
+          title: Quantity
+      type: object
+      required:
+      - productId
+      - quantity
+      title: OrderItemInput
+    OrderListItem:
+      properties:
+        id:
+          type: string
+          title: Id
+        orderNumber:
+          type: string
+          title: Ordernumber
+        status:
+          type: string
+          title: Status
+        totalAmount:
+          type: number
+          title: Totalamount
+        currency:
+          type: string
+          title: Currency
+        paymentMethod:
+          type: string
+          title: Paymentmethod
+        failureReason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Failurereason
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+        itemCount:
+          type: integer
+          title: Itemcount
+      type: object
+      required:
+      - id
+      - orderNumber
+      - status
+      - totalAmount
+      - currency
+      - paymentMethod
+      - createdAt
+      - itemCount
+      title: OrderListItem
+    OrderListResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/OrderListItem'
+          type: array
+          title: Data
+        page:
+          type: integer
+          title: Page
+        limit:
+          type: integer
+          title: Limit
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - data
+      - page
+      - limit
+      - total
+      title: OrderListResponse
+    PaymentDetail:
+      properties:
+        status:
+          type: string
+          title: Status
+        transactionRef:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Transactionref
+      type: object
+      required:
+      - status
+      title: PaymentDetail
+    ProductDetailResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        price:
+          type: number
+          title: Price
+        category:
+          type: string
+          title: Category
+        imageUrl:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Imageurl
+        isActive:
+          type: boolean
+          title: Isactive
+        availableQuantity:
+          type: integer
+          title: Availablequantity
+        createdAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Createdat
+      type: object
+      required:
+      - id
+      - name
+      - price
+      - category
+      - isActive
+      - availableQuantity
+      title: ProductDetailResponse
+    ProductListItem:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        price:
+          type: number
+          title: Price
+        category:
+          type: string
+          title: Category
+        imageUrl:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Imageurl
+        availableQuantity:
+          type: integer
+          title: Availablequantity
+      type: object
+      required:
+      - id
+      - name
+      - price
+      - category
+      - availableQuantity
+      title: ProductListItem
+    ProductListResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ProductListItem'
+          type: array
+          title: Data
+        page:
+          type: integer
+          title: Page
+        limit:
+          type: integer
+          title: Limit
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - data
+      - page
+      - limit
+      - total
+      title: ProductListResponse
+    RegisterRequest:
+      properties:
+        name:
+          type: string
+          maxLength: 60
+          minLength: 2
+          title: Name
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          minLength: 8
+          title: Password
+        role:
+          type: string
+          enum:
+          - CUSTOMER
+          - ADMIN
+          title: Role
+          default: CUSTOMER
+      type: object
+      required:
+      - name
+      - email
+      - password
+      title: RegisterRequest
+    ShipmentDetail:
+      properties:
+        trackingNumber:
+          type: string
+          title: Trackingnumber
+        carrier:
+          type: string
+          title: Carrier
+      type: object
+      required:
+      - trackingNumber
+      - carrier
+      title: ShipmentDetail
+    ShippingAddressInput:
+      properties:
+        name:
+          type: string
+          minLength: 2
+          title: Name
+        line1:
+          type: string
+          minLength: 3
+          title: Line1
+        city:
+          type: string
+          minLength: 2
+          title: City
+        state:
+          type: string
+          minLength: 2
+          title: State
+        pincode:
+          type: string
+          pattern: ^\d{6}$
+          title: Pincode
+        phone:
+          type: string
+          pattern: ^\d{10}$
+          title: Phone
+      type: object
+      required:
+      - name
+      - line1
+      - city
+      - state
+      - pincode
+      - phone
+      title: ShippingAddressInput
+    UpdateInventoryRequest:
+      properties:
+        quantityAvailable:
+          type: integer
+          minimum: 0.0
+          title: Quantityavailable
+      type: object
+      required:
+      - quantityAvailable
+      title: UpdateInventoryRequest
+    UpdateProductRequest:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 255
+            minLength: 2
+          - type: 'null'
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        price:
+          anyOf:
+          - type: number
+            exclusiveMinimum: 0.0
+          - type: string
+          - type: 'null'
+          title: Price
+        category:
+          anyOf:
+          - type: string
+            maxLength: 100
+            minLength: 1
+          - type: 'null'
+          title: Category
+        imageUrl:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Imageurl
+        isActive:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Isactive
+      type: object
+      title: UpdateProductRequest
+    UserProfileResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        email:
+          type: string
+          title: Email
+        role:
+          type: string
+          title: Role
+        createdAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Createdat
+      type: object
+      required:
+      - id
+      - name
+      - email
+      - role
+      title: UserProfileResponse
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
