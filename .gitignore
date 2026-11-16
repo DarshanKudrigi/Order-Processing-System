@@ -4,6 +4,7 @@ backend/.venv/
 env/
 venv/
 
+
 # Environment Variables & Secrets
 backend/.env
 .env
