@@ -6,12 +6,12 @@ A production-grade, loosely coupled, event-driven order processing backend built
 
 ## 1. Architecture Overview
 
-Services communicate exclusively by publishing and consuming events from the `order-events` Azure Service Bus topic.
+Services communicate exclusively by publishing and consuming events from the `order-events` Azure Service Bus topic (with seamless local in-memory fallback for offline/development environments).
 
 ```
 [Browser / Client]
        │
-       ▼ (REST API)
+       ▼ (REST API + JWT)
  ┌────────────┐               ┌─────────────────────────────────────────────────────────┐
  │ Order API  ├──────────────►│        Azure Service Bus: Topic "order-events"          │
  └─────┬──────┘ (OrderCreated)└──────┬────────────┬─────────────┬─────────────┬─────────┘
@@ -25,17 +25,17 @@ Services communicate exclusively by publishing and consuming events from the `or
 ```
 
 ### Event Flow (Happy Path)
-1. **Order API**: Customer places order -> validated, saved as `PENDING`, publishes `OrderCreated` (EVT-01) -> returns `202 Accepted`.
-2. **Inventory Worker**: Listens on `inventory-sub` -> checks and reserves stock in one database transaction -> publishes `StockReserved` (EVT-02).
-3. **Payment Worker**: Listens on `payment-sub` -> simulates gateway payment -> creates `Payment` row -> publishes `PaymentCompleted` (EVT-04).
-4. **Shipping Worker**: Listens on `shipping-sub` -> creates `Shipment` with tracking number via `DemoExpress`, releases reserved inventory -> publishes `ShipmentCreated` (EVT-06).
-5. **Status Listener**: Inside Order API, listens on `status-sub` -> enforces forward-only status transitions (`PENDING` -> `STOCK_RESERVED` -> `PAID` -> `SHIPPED`) and records all timeline events in `order_events`.
-6. **Notification Worker**: Listens on `notification-sub` -> generates branded notification and sends via SendGrid or logs with graceful fallback without ever blocking order progress.
+1. **Order API**: Customer places order ➔ validated, saved as `PENDING`, publishes `OrderCreated` (EVT-01) ➔ returns `202 Accepted`.
+2. **Inventory Worker**: Listens on `inventory-sub` ➔ checks and reserves stock in an atomic database transaction ➔ publishes `StockReserved` (EVT-02).
+3. **Payment Worker**: Listens on `payment-sub` ➔ processes mock payment gateway transaction ➔ creates `Payment` record ➔ publishes `PaymentCompleted` (EVT-04).
+4. **Shipping Worker**: Listens on `shipping-sub` ➔ creates `Shipment` with tracking number via `DemoExpress`, settles inventory ➔ publishes `ShipmentCreated` (EVT-06).
+5. **Status Listener**: Inside Order API process, listens on `status-sub` ➔ enforces forward-only status transitions (`PENDING` ➔ `STOCK_RESERVED` ➔ `PAID` ➔ `SHIPPED`) and records all timeline events.
+6. **Notification Worker**: Listens on `notification-sub` ➔ formats branded notifications via SendGrid or logs with graceful fallback without blocking order processing.
 
 ### Compensation & Failure Flows
-- **Out of stock**: Inventory Worker publishes `StockReservationFailed` (EVT-03) -> Status Listener sets order status to `FAILED` (`INSUFFICIENT_STOCK`).
-- **Payment failure (`TEST_FAIL`)**: Payment Worker publishes `PaymentFailed` (EVT-05) -> Status Listener sets order to `FAILED` (`PAYMENT_FAILED`) -> Inventory Worker consumes `PaymentFailed` and reverses reserved stock back to available stock.
-- **Order Cancellation**: Customer calls `/api/orders/:id/cancel` while in `PENDING` or `STOCK_RESERVED` -> API marks order `CANCELLED`, publishes `OrderCancelled` (EVT-07) -> Inventory Worker releases held reservation.
+- **Out of stock**: Inventory Worker publishes `StockReservationFailed` (EVT-03) ➔ Status Listener marks order `FAILED` (`INSUFFICIENT_STOCK`).
+- **Payment failure (`TEST_FAIL`)**: Payment Worker publishes `PaymentFailed` (EVT-05) ➔ Status Listener marks order `FAILED` (`PAYMENT_FAILED`) ➔ Inventory Worker consumes `PaymentFailed` and reverses reserved stock back to available stock.
+- **Order Cancellation**: Customer calls `/api/orders/:id/cancel` while in `PENDING` or `STOCK_RESERVED` ➔ API marks order `CANCELLED`, publishes `OrderCancelled` (EVT-07) ➔ Inventory Worker automatically releases the held stock reservation.
 
 ---
 
@@ -75,9 +75,34 @@ uv pip install -e ".[dev]"
 ```
 
 ### 2. Configuration
-Copy `.env.example` to `.env` and fill in your credentials:
+Copy `.env.example` to `.env` and fill in your local database credentials:
 ```bash
 cp .env.example .env
+```
+
+#### Safe `.env` Template:
+```env
+ENVIRONMENT=development
+PORT=8080
+
+# PostgreSQL Configuration (Replace with your local credentials)
+DATABASE_URL=postgresql+asyncpg://<DB_USER>:<DB_PASSWORD>@<DB_HOST>:5432/<DB_NAME>
+SYNC_DATABASE_URL=postgresql://<DB_USER>:<DB_PASSWORD>@<DB_HOST>:5432/<DB_NAME>
+
+# JWT Authentication
+JWT_SECRET=<YOUR_RANDOM_SECRET_KEY_MINIMUM_32_CHARACTERS>
+JWT_EXPIRES_IN=8h
+CORS_ORIGIN=http://localhost:5173
+
+# Azure Service Bus (Local in-process fallback active when true)
+USE_IN_MEMORY_BUS=true
+SERVICEBUS_CONNECTION_STRING=
+SB_TOPIC_NAME=order-events
+SB_MAX_CONCURRENT_CALLS=5
+
+# Optional SendGrid Configuration
+SENDGRID_API_KEY=
+MAIL_FROM=orders@example.com
 ```
 
 ### 3. Database Creation & Migrations
@@ -88,7 +113,7 @@ python scripts/create_db.py
 # Run Alembic migrations
 alembic upgrade head
 
-# Seed initial admin, customer, and 21 sample products
+# Seed initial admin, demo customer, and 21 sample products
 python scripts/seed.py
 ```
 
@@ -96,21 +121,34 @@ python scripts/seed.py
 ```powershell
 python -m src.api.server
 ```
-The API is available at `http://localhost:8080`.  
-Interactive Swagger docs: `http://localhost:8080/docs`.
+- API Base URL: `http://localhost:8080`
+- Interactive Swagger Docs: `http://localhost:8080/docs`
+- Health Probe: `http://localhost:8080/api/health`
 
 ### 5. Running Background Workers Individually
-When `USE_IN_MEMORY_BUS=false`:
+When `USE_IN_MEMORY_BUS=false` (Azure Service Bus cloud mode), launch workers in separate terminals:
 ```powershell
 python -m src.workers.inventory_worker
 python -m src.workers.payment_worker
 python -m src.workers.shipping_worker
 python -m src.workers.notification_worker
 ```
+*(When `USE_IN_MEMORY_BUS=true`, all 4 workers launch automatically in-process via FastAPI lifespan).*
 
 ---
 
-## 4. Running with Docker Compose
+## 4. Role-Based Authorization (RBAC)
+
+The backend strictly enforces role-based authorization using FastAPI dependencies:
+
+| Role | Permissions |
+|---|---|
+| `ADMIN` | Access `/api/admin/*` (stats, DLQ peek), modify inventory via `PATCH /api/inventory/:id`, create/update/delete products via `/api/products`, view all system orders |
+| `CUSTOMER` | Place orders via `POST /api/orders`, retrieve personal orders and event timelines, cancel personal orders |
+
+---
+
+## 5. Running with Docker Compose
 
 To run PostgreSQL, Order API, and all 4 background workers simultaneously:
 ```powershell
@@ -119,13 +157,16 @@ docker-compose up --build
 
 ---
 
-## 5. Running Tests and Quality Checks
+## 6. Running Tests & Quality Checks
 
 ```powershell
 # Format and linting
 ruff check .
 mypy src tests scripts
 
-# Run full test suite (unit + acceptance integration tests AT-01 to AT-10)
+# Run full pytest test suite (unit + acceptance integration tests AT-01 to AT-10)
 pytest -v
+
+# Run end-to-end diagnostic verification script
+python scripts/test_services.py
 ```
