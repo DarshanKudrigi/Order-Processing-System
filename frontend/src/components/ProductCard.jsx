@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { ShoppingBag, Check, AlertCircle } from 'lucide-react';
 
 export default function ProductCard({ product, onSelect }) {
   const { items, addItem } = useCart();
+  const { isAdmin } = useAuth();
   const [imgError, setImgError] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
 
@@ -92,36 +94,42 @@ export default function ProductCard({ product, onSelect }) {
             </span>
           </div>
 
-          <button
-            onClick={handleAddToCart}
-            disabled={isOutOfStock}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-              isOutOfStock
-                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                : justAdded
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-200'
-                : inCartQty > 0
-                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-100'
-            }`}
-          >
-            {justAdded ? (
-              <>
-                <Check size={14} />
-                <span>Added!</span>
-              </>
-            ) : inCartQty > 0 ? (
-              <>
-                <ShoppingBag size={14} />
-                <span>In Cart ({inCartQty})</span>
-              </>
-            ) : (
-              <>
-                <ShoppingBag size={14} />
-                <span>Add</span>
-              </>
-            )}
-          </button>
+          {isAdmin ? (
+            <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 group-hover:bg-purple-100 transition">
+              Inspect Specs
+            </span>
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              disabled={isOutOfStock}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                isOutOfStock
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  : justAdded
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-200'
+                  : inCartQty > 0
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-100'
+              }`}
+            >
+              {justAdded ? (
+                <>
+                  <Check size={14} />
+                  <span>Added!</span>
+                </>
+              ) : inCartQty > 0 ? (
+                <>
+                  <ShoppingBag size={14} />
+                  <span>In Cart ({inCartQty})</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingBag size={14} />
+                  <span>Add</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>

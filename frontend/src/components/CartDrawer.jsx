@@ -49,7 +49,7 @@ export default function CartDrawer({ onOrderCreated }) {
 
   const handleFillDemoAddress = () => {
     setShippingAddress({
-      name: user?.name || 'Asha K',
+      name: user?.name || 'Demo User',
       line1: '42 Tech Enclave, Outer Ring Road',
       city: 'Bengaluru',
       state: 'Karnataka',
@@ -69,8 +69,8 @@ export default function CartDrawer({ onOrderCreated }) {
 
     if (!isAuthenticated) {
       try {
-        await quickDemoLogin('CUSTOMER');
-        addToast('Signed in as Asha K to complete checkout', 'info');
+        const demoUser = await quickDemoLogin('CUSTOMER');
+        addToast(`Signed in as ${demoUser?.name || 'Demo User'} to complete checkout`, 'info');
       } catch (authErr) {
         addToast('Please sign in before placing an order', 'warning');
         return;

@@ -60,10 +60,10 @@ export const api = {
         method: 'POST',
         body: { email, password },
       }),
-    register: (name, email, password) =>
+    register: (name, email, password, role = 'CUSTOMER') =>
       request('/auth/register', {
         method: 'POST',
-        body: { name, email, password },
+        body: { name, email, password, role },
       }),
     getMe: () => request('/auth/me'),
   },

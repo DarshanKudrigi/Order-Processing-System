@@ -51,16 +51,9 @@ export function AuthProvider({ children }) {
     return userData;
   };
 
-  const register = async (name, email, password) => {
-    const res = await api.auth.register(name, email, password);
-    const jwtToken = res.token;
-    const userData = res.user;
-
-    setToken(jwtToken);
-    setUser(userData);
-    localStorage.setItem('token', jwtToken);
-    localStorage.setItem('user', JSON.stringify(userData));
-    return userData;
+  const register = async (name, email, password, role = 'CUSTOMER') => {
+    await api.auth.register(name, email, password, role);
+    return await login(email, password);
   };
 
   const logout = () => {
@@ -75,7 +68,7 @@ export function AuthProvider({ children }) {
     if (role === 'ADMIN') {
       return await login('admin@example.com', 'Admin123!');
     }
-    return await login('asha@example.com', 'Passw0rd!');
+    return await login('demo@example.com', 'Demo123!');
   };
 
   const value = {

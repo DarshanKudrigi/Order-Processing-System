@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
 import { X, ShoppingBag, Check, ShieldCheck, Box } from 'lucide-react';
 
 export default function ProductModal({ product, onClose }) {
   const { addItem } = useCart();
+  const { isAdmin } = useAuth();
   const { addToast } = useToast();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
@@ -99,53 +101,68 @@ export default function ProductModal({ product, onClose }) {
             </div>
           </div>
 
-          {/* Action Row */}
-          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-3">
-            {/* Quantity control */}
-            <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50 p-1">
+          {/* Action Row: Cart controls only for Customer; Admin gets Spec Details & Close */}
+          {isAdmin ? (
+            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-xs text-purple-700 font-semibold bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200">
+                Administrator View (Specs & Stock Reservation)
+              </span>
               <button
                 type="button"
-                onClick={() => setQty(Math.max(1, qty - 1))}
-                disabled={qty <= 1 || isOutOfStock}
-                className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-slate-600 hover:bg-white transition disabled:opacity-30 cursor-pointer"
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer"
               >
-                -
-              </button>
-              <span className="w-10 text-center text-xs font-bold text-slate-900">{qty}</span>
-              <button
-                type="button"
-                onClick={() => setQty(Math.min(maxStock, qty + 1))}
-                disabled={qty >= maxStock || isOutOfStock}
-                className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-slate-600 hover:bg-white transition disabled:opacity-30 cursor-pointer"
-              >
-                +
+                Close
               </button>
             </div>
+          ) : (
+            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-3">
+              {/* Quantity control */}
+              <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50 p-1">
+                <button
+                  type="button"
+                  onClick={() => setQty(Math.max(1, qty - 1))}
+                  disabled={qty <= 1 || isOutOfStock}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-slate-600 hover:bg-white transition disabled:opacity-30 cursor-pointer"
+                >
+                  -
+                </button>
+                <span className="w-10 text-center text-xs font-bold text-slate-900">{qty}</span>
+                <button
+                  type="button"
+                  onClick={() => setQty(Math.min(maxStock, qty + 1))}
+                  disabled={qty >= maxStock || isOutOfStock}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-slate-600 hover:bg-white transition disabled:opacity-30 cursor-pointer"
+                >
+                  +
+                </button>
+              </div>
 
-            <button
-              onClick={handleAdd}
-              disabled={isOutOfStock}
-              className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer shadow-md ${
-                isOutOfStock
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                  : added
-                  ? 'bg-emerald-600 text-white shadow-emerald-200'
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-100'
-              }`}
-            >
-              {added ? (
-                <>
-                  <Check size={16} />
-                  <span>Added to Cart!</span>
-                </>
-              ) : (
-                <>
-                  <ShoppingBag size={16} />
-                  <span>{isOutOfStock ? 'Out of Stock' : `Add ${qty} to Cart`}</span>
-                </>
-              )}
-            </button>
-          </div>
+              <button
+                onClick={handleAdd}
+                disabled={isOutOfStock}
+                className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer shadow-md ${
+                  isOutOfStock
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                    : added
+                    ? 'bg-emerald-600 text-white shadow-emerald-200'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-100'
+                }`}
+              >
+                {added ? (
+                  <>
+                    <Check size={16} />
+                    <span>Added to Cart!</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag size={16} />
+                    <span>{isOutOfStock ? 'Out of Stock' : `Add ${qty} to Cart`}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

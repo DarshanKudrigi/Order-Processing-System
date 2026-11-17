@@ -12,7 +12,8 @@ import CartDrawer from './components/CartDrawer';
 import OrderTracker from './components/OrderTracker';
 import MyOrders from './components/MyOrders';
 import AdminDashboard from './components/AdminDashboard';
-import AuthModal from './components/AuthModal';
+import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
 
 import {
   Search,
@@ -32,10 +33,11 @@ function MainLayout() {
   const { user, isAdmin, isAuthenticated } = useAuth();
   const { addToast } = useToast();
 
-  const [activeView, setActiveView] = useState('store'); // 'store' | 'orders' | 'tracker' | 'admin'
+  // Active views: 'login' | 'register' | 'store' | 'orders' | 'tracker' | 'admin'
+  // REQUIREMENT: At first always the login page should appear not the Dashboard, afterwards Dashboard
+  const [activeView, setActiveView] = useState('login');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Products state
   const [products, setProducts] = useState(FALLBACK_PRODUCTS);
@@ -46,6 +48,39 @@ function MainLayout() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('featured'); // 'featured' | 'price-low' | 'price-high' | 'name'
+
+  // Route & Authentication Guard
+  useEffect(() => {
+    // 1. If not authenticated, always keep user on Login (or Register page)
+    if (!isAuthenticated) {
+      if (activeView !== 'login' && activeView !== 'register') {
+        setActiveView('login');
+      }
+      return;
+    }
+
+    // 2. If authenticated and currently on auth view, redirect immediately to respective dashboard
+    if (activeView === 'login' || activeView === 'register') {
+      if (isAdmin) {
+        setActiveView('admin');
+      } else {
+        setActiveView('store');
+      }
+      return;
+    }
+
+    // 3. If customer tries to access admin operations
+    if (activeView === 'admin' && !isAdmin) {
+      addToast('Administrator authorization required. Please sign in as Admin.', 'warning');
+      setActiveView('store');
+    }
+
+    // 4. If an Admin tries to access the customer MyOrders page
+    if (activeView === 'orders' && isAdmin) {
+      addToast('Administrators do not have a customer orders page. Redirected to Admin Operations.', 'info');
+      setActiveView('admin');
+    }
+  }, [activeView, isAdmin, isAuthenticated]);
 
   // Probe API on load
   const probeBackend = async () => {
@@ -86,7 +121,7 @@ function MainLayout() {
         setProducts(normalized);
       }
     } catch (err) {
-      // Graceful fallback to rich mock data if DB/API is offline
+      // Graceful fallback to mock data if API is offline
       let filtered = FALLBACK_PRODUCTS;
       if (selectedCategory !== 'All') {
         filtered = filtered.filter((p) => p.category === selectedCategory);
@@ -132,11 +167,10 @@ function MainLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 flex flex-col text-slate-900 font-sans selection:bg-indigo-500 selection:text-white">
-      {/* Navigation */}
+      {/* Navigation Bar */}
       <Navbar
         activeView={activeView}
         setActiveView={setActiveView}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
       />
 
       {/* Backend API Connection status notification if not connected yet */}
@@ -163,7 +197,17 @@ function MainLayout() {
 
       {/* Main Content Area */}
       <main className="flex-1">
-        {/* VIEW: STOREFRONT CATALOG */}
+        {/* VIEW 1: DEDICATED LOGIN PAGE */}
+        {activeView === 'login' && (
+          <LoginPage onNavigate={(view) => setActiveView(view)} />
+        )}
+
+        {/* VIEW 2: DEDICATED REGISTRATION PAGE */}
+        {activeView === 'register' && (
+          <RegisterPage onNavigate={(view) => setActiveView(view)} />
+        )}
+
+        {/* VIEW 3: STOREFRONT CATALOG (CUSTOMER / ADMIN CATALOG VIEW) */}
         {activeView === 'store' && (
           <div>
             {/* Hero Section */}
@@ -251,7 +295,7 @@ function MainLayout() {
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm('')}
-                    className="text-xs text-indigo-600 font-semibold hover:underline"
+                    className="text-xs text-indigo-600 font-semibold hover:underline cursor-pointer"
                   >
                     Clear search filter
                   </button>
@@ -286,15 +330,15 @@ function MainLayout() {
           </div>
         )}
 
-        {/* VIEW: CUSTOMER MY ORDERS */}
-        {activeView === 'orders' && (
+        {/* VIEW 4: CUSTOMER MY ORDERS (COMPLETELY BLOCKED FOR ADMIN) */}
+        {activeView === 'orders' && !isAdmin && (
           <MyOrders
             onSelectOrder={handleSelectOrderFromList}
             onGoToStore={() => setActiveView('store')}
           />
         )}
 
-        {/* VIEW: LIVE ORDER SAGA TRACKER */}
+        {/* VIEW 5: LIVE ORDER SAGA TRACKER */}
         {activeView === 'tracker' && (
           <OrderTracker
             orderId={selectedOrderId}
@@ -302,8 +346,8 @@ function MainLayout() {
           />
         )}
 
-        {/* VIEW: ADMIN OPERATIONS CONTROL PLANE */}
-        {activeView === 'admin' && (
+        {/* VIEW 6: ADMIN CONTROL PLANE (PRODUCT CATALOG & OPERATIONS) */}
+        {activeView === 'admin' && isAdmin && (
           <AdminDashboard onSelectOrder={handleSelectOrderFromList} />
         )}
       </main>
@@ -333,12 +377,8 @@ function MainLayout() {
         onClose={() => setSelectedProduct(null)}
       />
 
-      <CartDrawer onOrderCreated={handleOrderCreated} />
-
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-      />
+      {/* Cart Drawer: strictly removed and unavailable for Admin */}
+      {!isAdmin && <CartDrawer onOrderCreated={handleOrderCreated} />}
     </div>
   );
 }

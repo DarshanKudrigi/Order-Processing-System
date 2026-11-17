@@ -28,7 +28,8 @@ export default function ProductManager() {
     setLoading(true);
     try {
       const res = await api.products.list({ limit: 100 });
-      setProducts(res.items || res.products || []);
+      const list = res?.data || res?.items || res?.products || (Array.isArray(res) ? res : []);
+      setProducts(list);
     } catch (err) {
       addToast(err.message || 'Failed to fetch products', 'error');
     } finally {
@@ -59,9 +60,9 @@ export default function ProductManager() {
       name: prod.name,
       category: prod.category,
       price: prod.price,
-      initialStock: prod.quantity_available ?? 0,
+      initialStock: prod.availableQuantity ?? prod.quantity_available ?? 0,
       description: prod.description || '',
-      image_url: prod.image_url || '',
+      image_url: prod.imageUrl || prod.image_url || '',
     });
     setIsModalOpen(true);
   };
@@ -76,8 +77,8 @@ export default function ProductManager() {
           category: form.category,
           price: Number(form.price),
           description: form.description,
-          image_url: form.image_url,
-          is_active: true,
+          imageUrl: form.image_url,
+          isActive: true,
         });
         addToast(`Updated ${form.name}`, 'success');
       } else {
@@ -85,9 +86,9 @@ export default function ProductManager() {
           name: form.name,
           category: form.category,
           price: Number(form.price),
-          initialStock: Number(form.initialStock),
+          availableQuantity: Number(form.initialStock || 0),
           description: form.description,
-          image_url: form.image_url,
+          imageUrl: form.image_url,
         });
         addToast(`Created product ${form.name}`, 'success');
       }
@@ -172,7 +173,7 @@ export default function ProductManager() {
                   <tr key={prod.id} className="hover:bg-slate-50/70 transition">
                     <td className="py-3 px-4 flex items-center gap-3">
                       <img
-                        src={prod.image_url}
+                        src={prod.imageUrl || prod.image_url}
                         alt={prod.name}
                         className="w-9 h-9 rounded-lg object-cover bg-slate-100 shrink-0"
                       />
@@ -193,18 +194,18 @@ export default function ProductManager() {
                     </td>
 
                     <td className="py-3 px-4 font-mono text-slate-700">
-                      {prod.quantity_available ?? '—'}
+                      {prod.availableQuantity ?? prod.quantity_available ?? '—'}
                     </td>
 
                     <td className="py-3 px-4">
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          prod.is_active !== false
+                          prod.isActive !== false && prod.is_active !== false
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-slate-100 text-slate-500'
                         }`}
                       >
-                        {prod.is_active !== false ? 'Active' : 'Inactive'}
+                        {prod.isActive !== false && prod.is_active !== false ? 'Active' : 'Inactive'}
                       </span>
                     </td>
 

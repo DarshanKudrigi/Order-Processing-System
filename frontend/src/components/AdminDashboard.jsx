@@ -229,31 +229,19 @@ export default function AdminDashboard({ onSelectOrder }) {
           onClick={() => setActiveTab('overview')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
             activeTab === 'overview'
-              ? 'bg-slate-900 text-white shadow-xs'
+              ? 'bg-purple-600 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <TrendingUp size={14} />
-          <span>Overview & KPIs</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('inventory')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'inventory'
-              ? 'bg-slate-900 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Boxes size={14} />
-          <span>Inventory Balances</span>
+          <span>Admin Operations</span>
         </button>
 
         <button
           onClick={() => setActiveTab('products')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
             activeTab === 'products'
-              ? 'bg-slate-900 text-white shadow-xs'
+              ? 'bg-purple-600 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -262,10 +250,22 @@ export default function AdminDashboard({ onSelectOrder }) {
         </button>
 
         <button
+          onClick={() => setActiveTab('inventory')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'inventory'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Boxes size={14} />
+          <span>Inventory Balances</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('health')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
             activeTab === 'health'
-              ? 'bg-slate-900 text-white shadow-xs'
+              ? 'bg-purple-600 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
