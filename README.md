@@ -315,18 +315,45 @@ docker-compose up -d postgres
 
 ---
 
-### Running Background Workers Individually
+### Running Background Workers
 
-When running against a live Azure Service Bus namespace (`USE_IN_MEMORY_BUS=false`), launch workers in dedicated terminals:
+When running against a live Azure Service Bus namespace (`USE_IN_MEMORY_BUS=false`), the workers consume messages published to the topic `order-events`.
 
+#### Step 1: Provision / Verify Azure Service Bus Topics & Subscriptions
+Run the automated verification script to create the topic `order-events`, all 5 subscriptions, and apply their SQL filter rules:
 ```powershell
+cd backend
+python scripts/setup_azure_servicebus.py
+```
+
+#### Step 2: Run the Background Workers
+
+##### Option A: Unified Worker Runner (Recommended - All in 1 Terminal)
+Runs all 4 worker microservices concurrently in a single terminal with graceful Ctrl+C shutdown:
+```powershell
+cd backend
+python scripts/run_all_workers.py
+```
+
+##### Option B: Individual Microservice Terminals (Dedicated Processes)
+Open separate terminal tabs for full distributed process isolation:
+```powershell
+# Terminal 1 - Inventory Worker (Topic subscription: inventory-sub)
 python -m src.workers.inventory_worker
+
+# Terminal 2 - Payment Worker (Topic subscription: payment-sub)
 python -m src.workers.payment_worker
+
+# Terminal 3 - Shipping Worker (Topic subscription: shipping-sub)
 python -m src.workers.shipping_worker
+
+# Terminal 4 - Notification Worker (Topic subscription: notification-sub)
 python -m src.workers.notification_worker
 ```
 
-*(Note: When `USE_IN_MEMORY_BUS=true`, background workers execute asynchronously in-process alongside the API server, requiring zero external cloud setup).*
+> **Note on Status Listener**: The `status-sub` consumer (which handles order lifecycle forward-only state progression) runs automatically inside the Order API server process (`python -m src.api.server`).
+>
+> *(When `USE_IN_MEMORY_BUS=true`, all background workers run asynchronously in-memory inside the API server lifespan, requiring zero cloud setup).*
 
 ---
 
