@@ -301,7 +301,7 @@ class ServiceBusManager:
         async with receiver:
             while stop_event is None or not stop_event.is_set():
                 messages = await receiver.receive_messages(
-                    max_message_count=settings.SB_MAX_CONCURRENT_CALLS, max_wait_time=5
+                    max_message_count=settings.SB_MAX_CONCURRENT_CALLS, max_wait_time=10
                 )
                 for msg_sb in messages:
                     msg_id = str(msg_sb.message_id)

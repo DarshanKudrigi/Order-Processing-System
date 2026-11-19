@@ -125,15 +125,36 @@ python -m src.api.server
 - Interactive Swagger Docs: `http://localhost:8080/docs`
 - Health Probe: `http://localhost:8080/api/health`
 
-### 5. Running Background Workers Individually
-When `USE_IN_MEMORY_BUS=false` (Azure Service Bus cloud mode), launch workers in separate terminals:
+### 5. Azure Service Bus Setup & Running Workers
+
+When using Azure Service Bus (`USE_IN_MEMORY_BUS=false`):
+
+#### A. Provision / Verify Topics & Subscriptions
+Run the automated script to ensure topic `order-events` and the 5 filtered subscriptions are created on Azure:
 ```powershell
+python scripts/setup_azure_servicebus.py
+```
+
+#### B. Run All Workers in One Terminal (Recommended)
+```powershell
+python scripts/run_all_workers.py
+```
+
+#### C. Run Workers in Dedicated Individual Terminals
+```powershell
+# Terminal 1 - Inventory Worker (inventory-sub)
 python -m src.workers.inventory_worker
+
+# Terminal 2 - Payment Worker (payment-sub)
 python -m src.workers.payment_worker
+
+# Terminal 3 - Shipping Worker (shipping-sub)
 python -m src.workers.shipping_worker
+
+# Terminal 4 - Notification Worker (notification-sub)
 python -m src.workers.notification_worker
 ```
-*(When `USE_IN_MEMORY_BUS=true`, all 4 workers launch automatically in-process via FastAPI lifespan).*
+*(Note: `status-sub` is handled in-process by the Order API server automatically via `src.api.status_listener`).*
 
 ---
 
